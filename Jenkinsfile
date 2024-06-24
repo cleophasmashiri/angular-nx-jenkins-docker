@@ -2,26 +2,37 @@ pipeline {
     agent any
 
     environment {
+        DOCKER_IMAGE = 'node:14' // Specify the Docker image you want to use
         NX_CLI = 'nx'
     }
 
     stages {
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build('your-angular-nx-image')
+                }
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
                 script {
-                    def nodeHome = tool name: 'NodeJS 20.11', type: 'NodeJSInstallation'
-                    env.PATH = "${nodeHome}/bin:${env.PATH}"
+                    docker.image('your-angular-nx-image').inside {
+                        sh 'npm ci'
+                    }
                 }
-                sh 'npm ci'
             }
         }
 
         stage('Lint') {
             steps {
                 script {
-                    def apps = sh(script: "${NX_CLI} show projects", returnStdout: true).trim().split('\n')
-                    for (app in apps) {
-                        sh "${NX_CLI} lint ${app}"
+                    docker.image('your-angular-nx-image').inside {
+                        def apps = sh(script: "${NX_CLI} show projects", returnStdout: true).trim().split('\n')
+                        for (app in apps) {
+                            sh "${NX_CLI} lint ${app}"
+                        }
                     }
                 }
             }
@@ -30,9 +41,11 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    def apps = sh(script: "${NX_CLI} show projects", returnStdout: true).trim().split('\n')
-                    for (app in apps) {
-                        sh "${NX_CLI} test ${app}"
+                    docker.image('your-angular-nx-image').inside {
+                        def apps = sh(script: "${NX_CLI} show projects", returnStdout: true).trim().split('\n')
+                        for (app in apps) {
+                            sh "${NX_CLI} test ${app}"
+                        }
                     }
                 }
             }
@@ -41,9 +54,11 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    def apps = sh(script: "${NX_CLI} show projects", returnStdout: true).trim().split('\n')
-                    for (app in apps) {
-                        sh "${NX_CLI} build ${app}"
+                    docker.image('your-angular-nx-image').inside {
+                        def apps = sh(script: "${NX_CLI} show projects", returnStdout: true).trim().split('\n')
+                        for (app in apps) {
+                            sh "${NX_CLI} build ${app}"
+                        }
                     }
                 }
             }
@@ -53,9 +68,11 @@ pipeline {
             steps {
                 script {
                     if (env.BRANCH_NAME == 'main') {
-                        def apps = sh(script: "${NX_CLI} show projects", returnStdout: true).trim().split('\n')
-                        for (app in apps) {
-                            sh "${NX_CLI} deploy ${app}"
+                        docker.image('your-angular-nx-image').inside {
+                            def apps = sh(script: "${NX_CLI} show projects", returnStdout: true).trim().split('\n')
+                            for (app in apps) {
+                                sh "${NX_CLI} deploy ${app}"
+                            }
                         }
                     } else {
                         echo 'Not deploying as this is not the main branch'
@@ -67,9 +84,11 @@ pipeline {
 
     post {
         always {
-            junit '**/test-results/*.xml'
-            archiveArtifacts artifacts: '**/dist/**', allowEmptyArchive: true
-            cleanWs()
+            docker.image('your-angular-nx-image').inside {
+                junit '**/test-results/*.xml'
+                archiveArtifacts artifacts: '**/dist/**', allowEmptyArchive: true
+                cleanWs()
+            }
         }
     }
 }
