@@ -9,7 +9,7 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 script {
-                    def nodeHome = tool name: 'NodeJS 14', type: 'NodeJSInstallation'
+                    def nodeHome = tool name: 'NodeJS 20.11', type: 'NodeJSInstallation'
                     env.PATH = "${nodeHome}/bin:${env.PATH}"
                 }
                 sh 'npm ci'
